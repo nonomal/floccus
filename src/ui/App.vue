@@ -2,6 +2,21 @@
   <v-app
     id="app"
     :style="appStyle">
+    <v-banner
+      v-if="isBrowser"
+      color="primary"
+      class="mb-1 white--text"
+      single-line>
+      {{ t('DescriptionDonateintervention') }}
+      <template #actions>
+        <v-btn
+          small
+          target="_blank"
+          href="https://floccus.org/donate/">
+          {{ t('LabelDonate') }}
+        </v-btn>
+      </template>
+    </v-banner>
     <v-content>
       <router-view />
     </v-content>
@@ -25,36 +40,35 @@
                 text
                 class="white--text"
                 v-bind="attrs"
-                :to="{name: routes.DONATE}"
+                :aria-label="t('LabelFunddevelopment')"
+                :to="{ name: routes.DONATE }"
                 target="_blank"
                 v-on="on">
-                <v-icon>mdi-heart-outline</v-icon>
+                <v-icon aria-hidden="true">
+                  mdi-heart-outline
+                </v-icon>
               </v-btn>
             </template>
             <span>{{ t('LabelFunddevelopment') }}</span>
           </v-tooltip>
-        </v-col>
-        <v-col class="d-flex flex-row-reverse">
-          <v-btn
-            v-if="secured"
-            text
-            x-small
-            :to="{name: routes.SET_KEY}"
-            target="_blank"
-            class="white--text">
-            <v-icon>mdi-lock-outline</v-icon>
-            {{ t('LabelSecuredcredentials') }}
-          </v-btn>
-          <v-btn
-            v-else
-            text
-            x-small
-            :to="{name: routes.SET_KEY}"
-            target="_blank"
-            class="white--text">
-            <v-icon>mdi-lock-open-outline</v-icon>
-            {{ t('LabelSecurecredentials') }}
-          </v-btn>
+          <v-tooltip top>
+            <template #activator="{ on, attrs }">
+              <v-btn
+                x-small
+                text
+                class="white--text"
+                v-bind="attrs"
+                :aria-label="t('LabelOpeninnewtab')"
+                target="_blank"
+                @click="openInNewTab"
+                v-on="on">
+                <v-icon aria-hidden="true">
+                  mdi-open-in-new
+                </v-icon>
+              </v-btn>
+            </template>
+            <span>{{ t('LabelOpeninnewtab') }}</span>
+          </v-tooltip>
         </v-col>
       </v-row>
     </v-footer>
@@ -63,7 +77,11 @@
       :max-width="600"
       persistent>
       <v-card>
-        <v-card-title><v-icon>mdi-lock-outline</v-icon>{{ t('LabelUnlock') }}</v-card-title>
+        <v-card-title>
+          <v-icon aria-hidden="true">
+            mdi-lock-outline
+          </v-icon>{{ t('LabelUnlock') }}
+        </v-card-title>
         <v-card-text>
           <v-alert
             v-if="unlockError"
@@ -93,9 +111,10 @@
 
 <script>
 import { version as VERSION } from '../../package.json'
-import { actions } from './store'
+import { actions } from './store/definitions'
 import { routes } from './router'
 import Controller from '../lib/Controller'
+import browser from '../lib/browser-api'
 export default {
   name: 'App',
   data() {
@@ -109,22 +128,23 @@ export default {
     locked() {
       return this.$store.state.locked
     },
-    secured() {
-      return this.$store.state.secured
-    },
     routes() {
       return routes
     },
     appStyle() {
       return {
-        background: this.$vuetify.theme.dark ? '#000' : '#e1f5fe'
+        background: this.$vuetify.theme.dark ? '#000' : '#e1f5fe',
       }
-    }
+    },
   },
   async created() {
+    if (window.KAGI) {
+      browser.storage.local.set({ isOrion: true })
+    }
+
     await Promise.all([
       this.$store.dispatch(actions.LOAD_LOCKED),
-      this.$store.dispatch(actions.LOAD_ACCOUNTS)
+      this.$store.dispatch(actions.LOAD_ACCOUNTS),
     ])
     const controller = await Controller.getSingleton()
     const unregister = controller.onStatusChange(() =>
@@ -143,13 +163,18 @@ export default {
         this.unlockError = e.message
         this.key = ''
       }
-    }
-  }
+    },
+    openInNewTab() {
+      browser.tabs.create({ url: window.location.href })
+    },
+  },
 }
 </script>
 
 <style>
-body {
-  min-width: 420px;
+@media screen and (min-device-width: 420px) {
+  body {
+    min-width: 420px;
+  }
 }
 </style>

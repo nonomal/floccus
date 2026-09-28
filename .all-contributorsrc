@@ -214,9 +214,59 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "dmotte",
+      "name": "Motte",
+      "avatar_url": "https://avatars.githubusercontent.com/u/37443982?v=4",
+      "profile": "https://dmotte.github.io/",
+      "contributions": [
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "macrogreg",
+      "name": "macrogreg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/20691812?v=4",
+      "profile": "https://github.com/macrogreg",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "andybalaam",
+      "name": "Andy Balaam",
+      "avatar_url": "https://avatars.githubusercontent.com/u/76812?v=4",
+      "profile": "http://www.artificialworlds.net",
+      "contributions": [
+        "code",
+        "bug"
+      ]
+    },
+    {
+      "login": "balthanon",
+      "name": "Balthanon",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5367358?v=4",
+      "profile": "https://github.com/balthanon",
+      "contributions": [
+        "ideas",
+        "bug"
+      ]
+    },
+    {
+      "login": "aaryanvangari",
+      "name": "aaryanvangari",
+      "avatar_url": "https://avatars.githubusercontent.com/u/247490833?v=4",
+      "profile": "https://github.com/aaryanvangari",
+      "contributions": [
+        "code",
+        "ideas"
+      ]
     }
   ],
   "skipCi": true,
   "contributorsPerLine": 7,
-  "commitConvention": "none"
+  "commitConvention": "none",
+  "commitType": "docs"
 }

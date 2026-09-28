@@ -3,24 +3,28 @@
     v-model="display"
     max-width="500px">
     <v-card>
-      <v-card-title class="text-h5">
+      <v-card-title
+        class="text-h5"
+        role="heading"
+        aria-level="2">
         {{ isNew? t('LabelAddfolder') : t('LabelEditfolder') }}
       </v-card-title>
       <v-card-text>
         <v-text-field
           v-model="temporaryTitle"
-          label="Title"
+          :label="t('LabelTitle')"
           hide-details />
         <v-text-field
           v-model="parentTitle"
           readonly
           :error="Boolean(parentError)"
           :error-messages="parentError"
-          label="Parent folder"
+          :label="t('LabelParentfolder')"
           @click="onTriggerFolderChooser">
           <template #append>
             <v-icon
               color="blue darken-1"
+              aria-hidden="true"
               @click="onTriggerFolderChooser">
               mdi-folder
             </v-icon>
@@ -47,7 +51,7 @@
     <DialogChooseFolder
       v-model="temporaryParent"
       :display.sync="displayFolderChooser"
-      :tree="tree" />
+      :folder-tree="folderTree" />
   </v-dialog>
 </template>
 
@@ -67,7 +71,7 @@ export default {
     isNew: {
       type: Boolean,
     },
-    tree: {
+    folderTree: {
       type: Object,
       required: true,
     },
@@ -89,15 +93,15 @@ export default {
       if (this.temporaryParent === null) {
         return ''
       }
-      const folder = this.tree.findFolder(this.temporaryParent)
+      const folder = this.folderTree.findFolder(this.temporaryParent)
       return folder ? folder.title || this.t('LabelUntitledfolder') : ''
     }
   },
   watch: {
     temporaryParent() {
-      if (!this.tree.findFolder(this.temporaryParent)) {
+      if (!this.folderTree.findFolder(this.temporaryParent)) {
         this.parentError = this.t('ErrorNofolderselected')
-      } else if (this.folder && this.tree.findFolder(this.folder.id).findFolder(this.temporaryParent)) {
+      } else if (this.folder && this.folderTree.findFolder(this.folder.id).findFolder(this.temporaryParent)) {
         this.parentError = this.t('ErrorFolderloopselected')
       } else {
         this.parentError = null
@@ -106,10 +110,10 @@ export default {
   },
   mounted() {
     this.temporaryTitle = this.folder.title || ''
-    const parentFolder = this.tree.findFolder(this.folder.parentId) ||
-        this.tree.findFolder(this.parentFolder) ||
-        this.tree.findFolder(this.$store.state.lastFolders[this.$route.params.accountId]) ||
-        this.tree.findFolder(this.tree.id)
+    const parentFolder = this.folderTree.findFolder(this.folder.parentId) ||
+        this.folderTree.findFolder(this.parentFolder) ||
+        this.folderTree.findFolder(this.$store.state.lastFolders[this.$route.params.accountId]) ||
+        this.folderTree.findFolder(this.folderTree.id)
     this.temporaryParent = parentFolder.id
   },
   methods: {

@@ -1,14 +1,21 @@
 <template>
-  <div>
+  <div class="native-scroll-container">
     <v-app-bar
-      app
-      absolute>
+      fixed
+      app>
       <v-btn
         icon
+        :aria-label="t('LabelBack')"
         :to="{name: routes.TREE, params: {accountId: id}}">
-        <v-icon>mdi-arrow-left</v-icon>
+        <v-icon aria-hidden="true">
+          mdi-arrow-left
+        </v-icon>
       </v-btn>
-      <v-app-bar-title>{{ t('LabelOptions') }}</v-app-bar-title>
+      <v-app-bar-title
+        role="heading"
+        aria-level="1">
+        {{ t('LabelOptions') }}
+      </v-app-bar-title>
       <v-spacer />
       <v-btn
         color="blue darken-1"
@@ -20,10 +27,19 @@
     </v-app-bar>
     <v-main>
       <v-form
-        v-if="!loading"
-        class="mt-3 mb-3">
+        v-if="!loading">
         <OptionsNextcloudBookmarks
           v-if="data.type === 'nextcloud-folders' || data.type === 'nextcloud-bookmarks'"
+          v-bind.sync="data"
+          @reset="onReset"
+          @delete="onDelete" />
+        <OptionsLinkwarden
+          v-if="data.type === 'linkwarden'"
+          v-bind.sync="data"
+          @reset="onReset"
+          @delete="onDelete" />
+        <OptionsKarakeep
+          v-if="data.type === 'karakeep'"
           v-bind.sync="data"
           @reset="onReset"
           @delete="onDelete" />
@@ -42,6 +58,17 @@
           v-bind.sync="data"
           @reset="onReset"
           @delete="onDelete" />
+        <OptionsDropbox
+          v-if="data.type === 'dropbox'"
+          v-bind.sync="data"
+          @reset="onReset"
+          @delete="onDelete" />
+        <OptionsGit
+          v-if="data.type === 'git'"
+          v-bind.sync="data"
+          @reset="onReset"
+          @delete="onDelete" />
+        <v-spacer style="padding-bottom: 80px;" />
       </v-form>
     </v-main>
   </div>
@@ -51,14 +78,17 @@
 import OptionsFake from '../../components/OptionsFake'
 import OptionsWebdav from '../../components/OptionsWebdav'
 import OptionsNextcloudBookmarks from '../../components/OptionsNextcloudBookmarks'
-import { actions } from '../../store/native'
+import { actions } from '../../store/definitions'
 import { routes } from '../../NativeRouter'
 import OptionsGoogleDrive from '../../components/OptionsGoogleDrive'
-// iport PathHelper from '../../../lib/PathHelper'
+import OptionsDropbox from '../../components/OptionsDropbox'
+import OptionsGit from '../../components/OptionsGit.vue'
+import OptionsLinkwarden from '../../components/OptionsLinkwarden.vue'
+import OptionsKarakeep from '../../components/OptionsKarakeep.vue'
 
 export default {
   name: 'Options',
-  components: { OptionsGoogleDrive, OptionsNextcloudBookmarks, OptionsWebdav, OptionsFake },
+  components: { OptionsLinkwarden, OptionsKarakeep, OptionsGit, OptionsGoogleDrive, OptionsDropbox, OptionsNextcloudBookmarks, OptionsWebdav, OptionsFake },
   data() {
     return {
       drawer: false,

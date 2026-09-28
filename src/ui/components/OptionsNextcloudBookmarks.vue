@@ -1,9 +1,23 @@
 <template>
   <v-container>
+    <div>
+      <v-text-field
+        append-icon="mdi-label"
+        class="mt-2 mb-4"
+        :value="label"
+        :label="t('LabelAccountlabel')"
+        :hint="t('DescriptionAccountlabel')"
+        :persistent-hint="true"
+        @input="$emit('update:label', $event)" />
+    </div>
     <v-card class="mb-4">
       <v-card-title
-        id="server">
-        <v-icon>mdi-account-box</v-icon>
+        id="server"
+        role="heading"
+        aria-level="2">
+        <v-icon aria-hidden="true">
+          mdi-account-box
+        </v-icon>
         {{ t('LabelOptionsServerDetails') }}
       </v-card-title>
       <v-card-text>
@@ -23,12 +37,19 @@
 
     <v-card class="mb-4">
       <v-card-title
-        id="folder">
-        <v-icon>mdi-folder-outline</v-icon>
+        id="folder"
+        role="heading"
+        aria-level="2">
+        <v-icon aria-hidden="true">
+          mdi-folder-outline
+        </v-icon>
         {{ t('LabelOptionsFolderMapping') }}
       </v-card-title>
       <v-card-text>
-        <div class="text-h6">
+        <div
+          class="text-h6"
+          role="heading"
+          aria-level="3">
           {{ t('LabelServerfolder') }}
         </div>
         <div class="caption">
@@ -52,45 +73,80 @@
       class="mb-4">
       <v-card-title
         id="mobile"
-        class="text-h5">
-        <v-icon>mdi-cellphone-settings</v-icon>
+        class="text-h5"
+        role="heading"
+        aria-level="2">
+        <v-icon aria-hidden="true">
+          mdi-cellphone-settings
+        </v-icon>
         {{ t('LabelMobilesettings') }}
       </v-card-title>
       <v-card-text>
         <OptionAllowNetwork
           :value="allowNetwork"
           @input="$emit('update:allowNetwork', $event)" />
+        <OptionExportBookmarks />
       </v-card-text>
     </v-card>
 
     <v-card class="mb-4">
       <v-card-title
         id="sync"
-        class="text-h5">
-        <v-icon>mdi-sync-circle</v-icon>
+        class="text-h5"
+        role="heading"
+        aria-level="2">
+        <v-icon aria-hidden="true">
+          mdi-sync-circle
+        </v-icon>
         {{ t('LabelOptionsSyncBehavior') }}
       </v-card-title>
       <v-card-text>
-        <OptionSyncInterval
-          v-if="isBrowser"
-          :value="syncInterval"
-          @input="$emit('update:syncInterval', $event)" />
+        <OptionAutoSync
+          :value="enabled"
+          @input="$emit('update:enabled', $event)" />
+        <OptionSyncOnStartup
+          :value="syncOnStartupEnabled"
+          @input="$emit('update:syncOnStartupEnabled', $event)" />
+        <template v-if="isBrowser">
+          <OptionSyncIntervalEnabled
+            :value="syncIntervalEnabled"
+            @input="$emit('update:syncIntervalEnabled', $event)" />
+          <OptionSyncInterval
+            v-if="syncIntervalEnabled"
+            :value="syncInterval"
+            @input="$emit('update:syncInterval', $event)" />
+        </template>
         <OptionSyncStrategy
-          v-if="!isBrowser"
           :value="strategy"
           @input="$emit('update:strategy', $event)" />
         <OptionNestedSync
           v-if="isBrowser"
           :value="nestedSync"
           @input="$emit('update:nestedSync', $event)" />
+        <v-switch
+          :input-value="clickCountEnabled"
+          :aria-label="t('LabelClickcount')"
+          :label="t('LabelClickcount')"
+          :hint="t('DescriptionClickcount')"
+          :persistent-hint="true"
+          dense
+          class="mt-0 pt-0"
+          @change="
+            $emit('update:clickCountEnabled', $event)
+            requestHistoryPermissions()
+          " />
       </v-card-text>
     </v-card>
 
     <v-card class="mb-4">
       <v-card-title
         id="danger"
-        class="text-h5">
-        <v-icon>mdi-alert-circle</v-icon>
+        class="text-h5"
+        role="heading"
+        aria-level="2">
+        <v-icon aria-hidden="true">
+          mdi-alert-circle
+        </v-icon>
         {{ t('LabelOptionsDangerous') }}
       </v-card-title>
       <v-card-text>
@@ -101,7 +157,6 @@
           @input="$emit('update:includeCredentials', $event)" />
         <OptionResetCache @click="$emit('reset')" />
         <OptionAllowRedirects
-          v-if="isBrowser"
           :value="allowRedirects"
           @input="$emit('update:allowRedirects', $event)" />
         <OptionFailsafe
@@ -126,14 +181,54 @@ import OptionClientCert from './OptionClientCert'
 import OptionAllowRedirects from './OptionAllowRedirects'
 import OptionDownloadLogs from './OptionDownloadLogs'
 import OptionAllowNetwork from './native/OptionAllowNetwork'
+import OptionExportBookmarks from './OptionExportBookmarks.vue'
+import { actions } from '../store/definitions'
+import OptionAutoSync from './OptionAutoSync.vue'
+import OptionSyncIntervalEnabled from './OptionSyncIntervalEnabled.vue'
+import OptionSyncOnStartup from './OptionSyncOnStartup.vue'
 
 export default {
   name: 'OptionsNextcloudBookmarks',
-  components: { OptionAllowNetwork, OptionDownloadLogs, OptionAllowRedirects, OptionClientCert, OptionFailsafe, OptionNestedSync, NextcloudLogin, OptionSyncFolder, OptionDeleteAccount, OptionSyncStrategy, OptionResetCache, OptionSyncInterval },
-  props: ['url', 'username', 'password', 'includeCredentials', 'serverRoot', 'localRoot', 'allowNetwork', 'syncInterval', 'strategy', 'nestedSync', 'failsafe', 'allowRedirects'],
+  components: {
+    OptionSyncOnStartup,
+    OptionSyncIntervalEnabled,
+    OptionAutoSync,
+    OptionExportBookmarks,
+    OptionAllowNetwork,
+    OptionDownloadLogs,
+    OptionAllowRedirects,
+    OptionClientCert,
+    OptionFailsafe,
+    OptionNestedSync,
+    NextcloudLogin,
+    OptionSyncFolder,
+    OptionDeleteAccount,
+    OptionSyncStrategy,
+    OptionResetCache,
+    OptionSyncInterval,
+  },
+  props: [
+    'url',
+    'username',
+    'password',
+    'includeCredentials',
+    'serverRoot',
+    'localRoot',
+    'allowNetwork',
+    'syncInterval',
+    'strategy',
+    'nestedSync',
+    'failsafe',
+    'allowRedirects',
+    'enabled',
+    'label',
+    'clickCountEnabled',
+    'syncIntervalEnabled',
+    'syncOnStartupEnabled',
+  ],
   data() {
     return {
-      panels: [0, 1]
+      panels: [0, 1],
     }
   },
   methods: {
@@ -146,11 +241,17 @@ export default {
       }
     },
     validateServerRoot(path) {
-      return !path || path === '/' || (path[0] === '/' && path[path.length - 1] !== '/')
+      return (
+        !path ||
+        path === '/' ||
+        (path[0] === '/' && path[path.length - 1] !== '/')
+      )
     },
-  }
+    requestHistoryPermissions() {
+      this.$store.dispatch(actions.REQUEST_HISTORY_PERMISSIONS)
+    },
+  },
 }
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

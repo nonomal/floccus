@@ -3,18 +3,20 @@
     v-if="src"
     ref="img"
     :src="src"
+    alt=""
     @error="onError">
   <v-icon
     v-else
-    large>
+    large
+    aria-hidden="true">
     mdi-star
   </v-icon>
 </template>
 
 <script>
 import { getIcons } from '../../../lib/getFavicon'
-import { Http } from '@capacitor-community/http'
-import {Storage} from '@capacitor/storage'
+import { CapacitorHttp as Http } from '@capacitor/core'
+import {Preferences as Storage} from '@capacitor/preferences'
 
 export default {
   name: 'FaviconImage',

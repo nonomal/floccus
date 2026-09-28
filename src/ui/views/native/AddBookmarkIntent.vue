@@ -1,21 +1,20 @@
 <template>
-  <div>
+  <div class="native-scroll-container">
     <v-app-bar
-      absolute
+      fixed
       app>
-      <v-btn
-        icon
-        :to="{name: routes.TREE, params: {accountId: id}}">
-        <v-icon>mdi-arrow-left</v-icon>
-      </v-btn>
-      <v-app-bar-title>Add Bookmark</v-app-bar-title>
+      <v-app-bar-title
+        role="heading"
+        aria-level="1">
+        {{ t('LabelAddbookmark') }}
+      </v-app-bar-title>
       <v-spacer />
       <v-btn
         color="blue darken-1"
         text
         elevation="1"
         @click="onSave">
-        Save
+        {{ t('LabelSave') }}
       </v-btn>
     </v-app-bar>
     <v-main>
@@ -24,7 +23,10 @@
         indeterminate
         color="blue darken-1"
         class="loading" />
-      <v-card v-else>
+      <v-card
+        v-else
+        class="mt-2"
+        style="min-height: 95vh">
         <v-card-text>
           <v-select
             dense
@@ -34,29 +36,56 @@
             :items="accounts"
             @change="$router.push({name: routes.ADD_BOOKMARK, params: {url, accountId: $event}})">
             <template #prepend-inner>
-              <v-icon>{{ account.data.type | accountIcon }}</v-icon>
+              <v-icon aria-hidden="true">
+                {{ account.data.type | accountIcon }}
+              </v-icon>
             </template>
             <template #item="{item}">
-              <v-icon>{{ item.data.type | accountIcon }}</v-icon> {{ item.label }}
+              <v-icon aria-hidden="true">
+                {{ item.data.type | accountIcon }}
+              </v-icon> {{ item.label }}
             </template>
           </v-select>
+          <v-alert
+            v-if="exists"
+            dense
+            outlined
+            text
+            type="info"
+            class="mb-2">
+            {{ t('DescriptionBookmarkexists') }}
+          </v-alert>
           <v-text-field
             v-model="title"
-            label="Title"
+            :label="t('LabelTitle')"
             hide-details />
           <v-text-field
             v-model="url"
             :error="Boolean(urlError)"
             :error-messages="urlError"
-            label="Link" />
+            :label="t('LabelLink')" />
+          <v-combobox
+            v-if="supportsTags"
+            v-model="tags"
+            :items="allTags"
+            :label="t('LabelTags')"
+            :hint="t('DescriptionTags')"
+            persistent-hint
+            multiple
+            chips
+            deletable-chips
+            small-chips
+            hide-selected
+            prepend-inner-icon="mdi-tag-multiple" />
           <v-text-field
             v-model="parentTitle"
             readonly
-            label="Parent folder"
+            :label="t('LabelParentfolder')"
             @click="onTriggerFolderChooser">
             <template #append>
               <v-icon
                 color="blue darken-1"
+                aria-hidden="true"
                 @click="onTriggerFolderChooser">
                 mdi-folder
               </v-icon>
@@ -66,17 +95,19 @@
       </v-card>
     </v-main>
     <DialogChooseFolder
+      v-if="folderTree"
       v-model="temporaryParent"
       :display.sync="displayFolderChooser"
-      :tree="tree" />
+      :folder-tree="folderTree" />
   </div>
 </template>
 
 <script>
 import { routes } from '../../NativeRouter'
-import { actions } from '../../store/native'
+import { actions } from '../../store/definitions'
 import { Bookmark } from '../../../lib/Tree'
 import DialogChooseFolder from '../../components/native/DialogChooseFolder'
+import { SendIntent } from 'send-intent'
 
 export default {
   name: 'AddBookmarkIntent',
@@ -85,8 +116,10 @@ export default {
     accountIcon(type) {
       const icons = {
         'google-drive': 'mdi-google-drive',
+        'dropbox': 'mdi-dropbox',
         'nextcloud-bookmarks': 'mdi-cloud',
-        'webdav': 'mdi-folder-network'
+        'webdav': 'mdi-folder-network',
+        'git': 'mdi-source-repository',
       }
       return icons[type]
     },
@@ -94,10 +127,13 @@ export default {
   data() {
     return {
       url: this.$route.params.url,
-      urlError: null,
+      urlError: this.checkUrl(this.$route.params.url),
       title: this.$route.params.title || '',
+      tags: [],
       temporaryParent: null,
       displayFolderChooser: false,
+      exists: false,
+      allTags: [],
     }
   },
   computed: {
@@ -119,60 +155,102 @@ export default {
     routes() {
       return routes
     },
-    tree() {
-      return this.$store.state.tree
+    folderTree() {
+      return this.$store.state.folderTree
     },
     parentTitle() {
       if (this.temporaryParent === null) {
         return ''
       }
-      const folder = this.tree.findFolder(this.temporaryParent)
+      const folder = this.folderTree.findFolder(this.temporaryParent)
       return folder ? folder.title || this.t('LabelUntitledfolder') : ''
-    }
+    },
+    supportsTags() {
+      return Boolean(this.$store.state.tagSupport[this.id])
+    },
   },
   watch: {
     loading() {
       if (this.loading) return
       this.data = this.$store.state.accounts[this.id].data
     },
-    url() {
-      this.urlError = null
-      try {
-        // eslint-disable-next-line
-        new URL(this.url)
-      } catch (e) {
-        this.urlError = 'Invalid URL'
-      }
+    id() {
+      this.$store.dispatch(actions.LOAD_FOLDERS, this.id)
     },
-    tree() {
-      const parentFolder = this.tree.findFolder(this.$store.state.lastFolders[this.id]) || this.tree.findFolder(this.tree.id)
+    async url() {
+      this.urlError = this.checkUrl(this.url)
+      await this.checkExists()
+    },
+    async folderTree() {
+      const parentFolder = this.folderTree.findFolder(this.$store.state.lastFolders[this.id]) || this.folderTree.findFolder(this.folderTree.id)
       this.temporaryParent = parentFolder.id
+      await Promise.all([this.loadAllTags(), this.checkExists()])
     },
   },
   created() {
     if (!this.loading) {
       this.data = this.$store.state.accounts[this.id].data
     }
-    if (this.tree) {
-      const parentFolder = this.tree.findFolder(this.$store.state.lastFolders[this.id]) || this.tree.findFolder(this.tree.id)
+    if (this.folderTree) {
+      const parentFolder = this.folderTree.findFolder(this.$store.state.lastFolders[this.id]) || this.folderTree.findFolder(this.folderTree.id)
       this.temporaryParent = parentFolder.id
+      // The folders may still be the previous account's, so ask about this one
+      this.$store.dispatch(actions.LOAD_TAG_SUPPORT, this.id)
+      this.loadAllTags()
+      this.checkExists()
     } else {
-      this.$store.dispatch(actions.LOAD_TREE, this.id)
+      this.$store.dispatch(actions.LOAD_FOLDERS, this.id)
     }
   },
   methods: {
     async onSave() {
-      if (!this.tree.findFolder(this.temporaryParent)) {
+      if (!this.folderTree.findFolder(this.temporaryParent) || this.urlError) {
         return
       }
       await this.$store.dispatch(actions.CREATE_BOOKMARK, {
         accountId: this.id,
-        bookmark: new Bookmark({ id: null, parentId: this.temporaryParent, title: this.title, url: this.url })
+        bookmark: new Bookmark({
+          id: null,
+          parentId: this.temporaryParent,
+          title: this.title,
+          url: this.url,
+          ...(this.supportsTags && {
+            tags: this.tags.map((tag) => String(tag).trim()).filter(Boolean),
+          }),
+        })
       })
+      SendIntent.finish()
       await this.$router.push({name: routes.TREE, params: {accountId: this.id}})
     },
     onTriggerFolderChooser() {
       this.displayFolderChooser = true
+    },
+    async loadAllTags() {
+      const tags = await this.$store.dispatch(actions.LOAD_TAGS, {
+        accountId: this.id,
+        folderId: null,
+      })
+      this.allTags = tags.sort((tag1, tag2) => tag1.localeCompare(tag2))
+    },
+    async checkExists() {
+      const url = this.url
+      const found = await this.$store.dispatch(actions.FIND_BOOKMARK_BY_URL, {
+        accountId: this.id,
+        url,
+      })
+      // The field is editable while we're querying
+      if (url === this.url) {
+        this.exists = Boolean(found)
+      }
+    },
+    checkUrl(url) {
+      try {
+        // eslint-disable-next-line
+        new URL(url)
+        return null
+      } catch (e) {
+        return 'Invalid URL'
+      }
     }
   }
 }

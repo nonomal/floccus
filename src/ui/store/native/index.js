@@ -5,16 +5,17 @@ import { actionsDefinition } from './actions'
 
 Vue.use(Vuex)
 
-export { mutations, actions } from '../definitions'
-
 export default new Store({
   mutations: mutationsDefinition,
   actions: actionsDefinition,
   state: {
     locked: false,
-    secured: false,
     accounts: {},
-    tree: null,
+    // The account's folders, without any bookmarks in them: the UI needs the
+    // hierarchy while it renders, everything else it queries (NativeTreeQuery)
+    folderTree: null,
+    // accountId -> whether both ends of that account's sync can store tags
+    tagSupport: {},
     loginFlow: {
       isRunning: false
     },
@@ -22,6 +23,7 @@ export default new Store({
       accounts: true,
     },
     lastFolders: {},
+    lastAccount: null,
   },
   getters: {},
 })

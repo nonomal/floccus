@@ -8,8 +8,9 @@
 
 <script>
 import { version as VERSION } from '../../package.json'
-import { actions } from './store/native'
+import { actions } from './store/definitions'
 import Controller from '../lib/Controller'
+
 export default {
   name: 'NativeApp',
   data() {
@@ -23,18 +24,16 @@ export default {
     locked() {
       return false
     },
-    secured() {
-      return false
-    },
     background() {
-      return this.$vuetify.theme.dark ? '#000' : '#fff'
+      return this.$vuetify.theme.dark ? '#000000' : '#ffffff'
     }
   },
   async created() {
+    const controller = await Controller.getSingleton()
+    await controller.onLoad()
     setInterval(() => {
       this.$store.dispatch(actions.LOAD_ACCOUNTS)
     }, 5000)
-    const controller = await Controller.getSingleton()
     controller.onStatusChange(() => {
       this.$store.dispatch(actions.LOAD_ACCOUNTS)
     })
@@ -48,8 +47,44 @@ body {
   padding-left: env(safe-area-inset-left);
   padding-right: env(sage-area-inset-right);
   background: v-bind(background);
+  font-size: 0.45cm !important;
+}
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: #000000;
+  }
+}
+html {
+  font-size: 0.45cm !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 .v-navigation-drawer {
   top: env(safe-area-inset-top) !important;
+  bottom: 0;
+}
+
+.native-scroll-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+.native-scroll-container .v-app-bar {
+  top: env(safe-area-inset-top) !important;
+}
+
+.native-scroll-container .v-main {
+  height: 100%;
+  overflow-y: auto;
 }
 </style>

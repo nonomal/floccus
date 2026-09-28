@@ -1,8 +1,21 @@
 import { fromUint8Array, toUint8Array } from 'js-base64'
+import { murmurhash3_32_gc } from './murmurhash3'
+import { XXHash32 } from 'ts-xxhash'
 
 export default class Crypto {
   static iterations = 250000
   static ivLength = 16
+
+  static async xxhash32(message: string): Promise<string> {
+    return XXHash32.hash(0, message).toString(16)
+  }
+
+  static async murmurHash3(message: string): Promise<string> {
+    const buf32 = new Uint32Array([murmurhash3_32_gc(message, 0)])
+    const buf8 = new Uint8Array(buf32.buffer)
+    buf8.reverse()
+    return this.bufferToHexstr(buf8)
+  }
 
   static async sha256(message: string): Promise<string> {
     const msgBuffer = new TextEncoder().encode(message) // encode as UTF-8
@@ -83,7 +96,7 @@ export default class Crypto {
     return result
   }
 
-  static getRandomBytes(bytelength: number) : Uint8Array {
+  static getRandomBytes(bytelength: number) : Uint8Array<ArrayBuffer> {
     const rand = new Uint8Array(bytelength)
     crypto.getRandomValues(rand)
     return rand

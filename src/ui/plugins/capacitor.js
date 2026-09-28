@@ -1,17 +1,12 @@
-import { Device } from '@capacitor/device'
+/* global IS_BROWSER */
 import { App } from '@capacitor/app'
-
-let deviceInfo = {}
-Device.getInfo().then(info => {
-  deviceInfo.platform = info.platform
-})
 
 let backButtonListener = null
 
 export default {
   computed: {
     isBrowser() {
-      return deviceInfo.platform === 'web' || !deviceInfo.platform
+      return IS_BROWSER
     },
   },
   mounted() {

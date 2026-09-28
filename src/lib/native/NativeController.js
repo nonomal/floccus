@@ -1,28 +1,35 @@
-import { Storage } from '@capacitor/storage'
+import { Preferences as Storage } from '@capacitor/preferences'
 import { Network } from '@capacitor/network'
 import Cryptography from '../Crypto'
 import NativeAccountStorage from './NativeAccountStorage'
-
-import PQueue from 'p-queue'
 import Account from '../Account'
-import onwakeup from 'onwakeup'
+import { STATUS_ALLGOOD, STATUS_DISABLED, STATUS_ERROR, STATUS_SYNCING } from '../interfaces/Controller'
+import { LocalNotifications } from '@capacitor/local-notifications'
+import { i18n } from './I18n'
+import ScreenWakeLock from './ScreenWakeLock'
 
 const INACTIVITY_TIMEOUT = 1000 * 7
+const MAX_BACKOFF_INTERVAL = 1000 * 60 * 60 // 1 hour
 const DEFAULT_SYNC_INTERVAL = 15
 
 class AlarmManager {
   constructor(ctl) {
     this.ctl = ctl
     this.backgroundSyncEnabled = true
-    setInterval(() => this.checkSync(), 60 * 1000)
+    setInterval(() => this.checkSync(), 25 * 1000)
+    setInterval(() => this.checkStorage(), 30 * 1000)
 
     Network.addListener('networkStatusChange', status => {
-      if (status.connected && status.connectionType === 'wifi') {
+      if (status.connected) {
         this.backgroundSyncEnabled = true
       } else {
         this.backgroundSyncEnabled = false
       }
     })
+  }
+
+  async checkStorage() {
+    // empty
   }
 
   async checkSync() {
@@ -33,29 +40,60 @@ class AlarmManager {
     for (let accountId of accounts) {
       const account = await Account.get(accountId)
       const data = account.getData()
+      const lastSync = data.lastSync || 0
+      const lastAttempt = data.lastAttempt || 0
+      const interval = data.syncInterval || DEFAULT_SYNC_INTERVAL
+      if (data.scheduled) {
+        await this.ctl.scheduleSync(accountId)
+        continue
+      }
+      if (data.error && !data.isTransientError) {
+        continue
+      }
+      if (data.error && data.errorCount > 1) {
+        if (Date.now() > this.getBackoffInterval(interval, data.errorCount) + lastAttempt) {
+          await this.ctl.scheduleSync(accountId)
+          continue
+        }
+        continue
+      }
       if (
-        !data.lastSync ||
+        data.syncIntervalEnabled &&
         Date.now() >
-        (data.syncInterval || DEFAULT_SYNC_INTERVAL) * 1000 * 60 + data.lastSync
+        interval * 1000 * 60 + lastSync
       ) {
-        // noinspection ES6MissingAwait
-        this.ctl.scheduleSync(accountId)
+        await this.ctl.scheduleSync(accountId)
       }
     }
+  }
+
+  /**
+   * Calculates the backoff interval based on the synchronization interval and the error count.
+   *
+   * This method determines the delay before retrying a synchronization
+   * after one or more errors have occurred. It uses an exponential
+   * backoff algorithm with a cap at the maximum backoff interval.
+   *
+   * @param {number} interval - The synchronization interval in minutes.
+   * @param {number} errorCount - The number of consecutive errors encountered.
+   * @returns {number} - The calculated backoff interval in milliseconds.
+   */
+  getBackoffInterval(interval, errorCount) {
+    return Math.min(MAX_BACKOFF_INTERVAL, interval * 1000 * 60 * Math.pow(2, errorCount))
   }
 }
 
 export default class NativeController {
   constructor() {
-    this.jobs = new PQueue({ concurrency: 1 })
-    this.waiting = {}
     this.schedule = {}
     this.listeners = []
 
     this.alarms = new AlarmManager(this)
 
-    // Set up onWakeup
-    onwakeup(() => this.onWakeup())
+    // Remove old logs. Only the stored ones: what this run has logged so far
+    // is still in Logger's buffer and belongs in the fresh log.
+
+    NativeAccountStorage.clearLogs()
 
     // lock accounts when locking is enabled
 
@@ -70,26 +108,6 @@ export default class NativeController {
 
   setEnabled(enabled) {
     this.enabled = enabled
-  }
-
-  async setKey(key) {
-    let accounts = await Account.getAllAccounts()
-    await Promise.all(accounts.map(a => a.updateFromStorage()))
-    this.key = key
-    let hashedKey = await Cryptography.sha256(key)
-    let encryptedHash = await Cryptography.encryptAES(
-      key,
-      hashedKey,
-      'FLOCCUS'
-    )
-    await Storage.set({ key: 'accountsLocked', value: encryptedHash })
-    if (accounts.length) {
-      await Promise.all(accounts.map(a => a.setData(a.getData())))
-    }
-
-    // ...aand unlock it immediately.
-    this.unlocked = true
-    this.setEnabled(true)
   }
 
   async unlock(key) {
@@ -111,15 +129,15 @@ export default class NativeController {
     this.setEnabled(true)
   }
 
-  async unsetKey() {
-    if (!this.unlocked) {
-      throw new Error('Cannot disable encryption without unlocking first')
+  getUnlocked() {
+    return Promise.resolve(this.unlocked)
+  }
+
+  async scheduleAll() {
+    const accounts = await Account.getAllAccounts()
+    for (const account of accounts) {
+      this.scheduleSync(account.id)
     }
-    let accounts = await Account.getAllAccounts()
-    await Promise.all(accounts.map(a => a.updateFromStorage()))
-    this.key = null
-    await Storage.set({ key: 'accountsLocked', value: null })
-    await Promise.all(accounts.map(a => a.setData(a.getData())))
   }
 
   async scheduleSync(accountId, wait) {
@@ -127,6 +145,7 @@ export default class NativeController {
       if (this.schedule[accountId]) {
         clearTimeout(this.schedule[accountId])
       }
+      console.log('scheduleSync: setting a timeout in ms :', INACTIVITY_TIMEOUT)
       this.schedule[accountId] = setTimeout(
         () => this.scheduleSync(accountId),
         INACTIVITY_TIMEOUT
@@ -138,30 +157,30 @@ export default class NativeController {
     if (account.getData().syncing) {
       return
     }
-    if (!account.getData().enabled) {
+
+    const status = await this.getStatus()
+    if (status === STATUS_SYNCING) {
+      await account.setData({ scheduled: account.getData().scheduled || true })
       return
     }
 
-    if (this.waiting[accountId]) {
-      return
+    if (account.getData().scheduled === true) {
+      await this.syncAccount(accountId)
+    } else {
+      await this.syncAccount(accountId, account.getData().scheduled)
     }
-
-    this.waiting[accountId] = true
-
-    return this.jobs.add(() => this.syncAccount(accountId))
   }
 
   async cancelSync(accountId, keepEnabled) {
     let account = await Account.get(accountId)
     // Avoid starting it again automatically
     if (!keepEnabled) {
-      await account.setData({ ...account.getData(), enabled: false })
+      await account.setData({ enabled: false })
     }
     await account.cancelSync()
   }
 
-  async syncAccount(accountId, strategy) {
-    this.waiting[accountId] = false
+  async syncAccount(accountId, strategy, forceSync = false) {
     if (!this.enabled) {
       return
     }
@@ -169,17 +188,83 @@ export default class NativeController {
     if (account.getData().syncing) {
       return
     }
+    const startTime = Date.now()
     setTimeout(() => this.updateStatus(), 500)
+    let notifications
+    if ((await LocalNotifications.checkPermissions()).display !== 'denied') {
+      ({ notifications } = await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: Math.round((Math.random() * 2 - 1) * 2147483647),
+            title: i18n.getMessage('StatusSyncing'),
+            body: i18n.getMessage('NotificationSyncingprofile', [account.getLabel()]),
+            ongoing: true,
+            smallIcon: 'notification_icon',
+            largeIcon: 'notification_icon',
+          }
+        ]
+      }))
+    }
+    await ScreenWakeLock.acquire()
     try {
-      await account.sync(strategy)
+      await account.sync(strategy, forceSync)
     } catch (error) {
       console.error(error)
+    } finally {
+      await ScreenWakeLock.release()
+    }
+    if ((await LocalNotifications.checkPermissions()).display !== 'denied') {
+      // Cancel the ongoing notification
+      await LocalNotifications.cancel({ notifications })
+      // eslint-disable-next-line no-constant-condition
+      if (Date.now() - startTime > 60 * 1000) {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Math.round((Math.random() * 2 - 1) * 2147483647),
+              title: account.getData().error
+                ? i18n.getMessage('StatusSyncingfailed')
+                : i18n.getMessage('StatusSyncingcomplete'),
+              body: account.getData().error
+                ? i18n.getMessage('NotificationSyncingfailed', [account.getLabel()])
+                : i18n.getMessage('NotificationSyncingsucceeded', [account.getLabel()]),
+              smallIcon: 'notification_icon',
+              largeIcon: 'notification_icon',
+            }
+          ]
+        })
+      }
     }
     this.updateStatus()
   }
 
   async updateStatus() {
     this.listeners.forEach(fn => fn())
+  }
+
+  async getStatus() {
+    if (!this.unlocked) {
+      return STATUS_ERROR
+    }
+    const accounts = await Account.getAllAccounts()
+    let overallStatus = accounts.reduce((status, account) => {
+      const accData = account.getData()
+      if (status === STATUS_SYNCING || accData.syncing) {
+        return STATUS_SYNCING
+      } else if (status === STATUS_ERROR || (accData.error && !accData.syncing)) {
+        return STATUS_ERROR
+      } else {
+        return STATUS_ALLGOOD
+      }
+    }, STATUS_ALLGOOD)
+
+    if (overallStatus === STATUS_ALLGOOD) {
+      if (accounts.every(account => !account.getData().enabled && !account.getData().syncIntervalEnabled && !account.getData().syncOnStartupEnabled)) {
+        overallStatus = STATUS_DISABLED
+      }
+    }
+
+    return overallStatus
   }
 
   onStatusChange(listener) {
@@ -193,25 +278,22 @@ export default class NativeController {
   }
 
   async onLoad() {
+    if ((await LocalNotifications.checkPermissions()).display !== 'denied') {
+      LocalNotifications.requestPermissions()
+    }
+
     const accounts = await Account.getAllAccounts()
     await Promise.all(
       accounts.map(async acc => {
         if (acc.getData().syncing) {
           await acc.setData({
-            ...acc.getData(),
             syncing: false,
-            error: false,
+            scheduled: false,
           })
         }
-      })
-    )
-  }
-
-  async onWakeup() {
-    const accounts = await Account.getAllAccounts()
-    await Promise.all(
-      accounts.map(async acc => {
-        await acc.cancelSync()
+        if (acc.getData().syncOnStartupEnabled) {
+          this.scheduleSync(acc.id)
+        }
       })
     )
   }

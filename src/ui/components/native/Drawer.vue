@@ -7,7 +7,9 @@
     @input="$emit('update:visible')">
     <v-list-item two-line>
       <v-list-item-avatar>
-        <img src="icons/logo.svg">
+        <img
+          src="icons/logo.svg"
+          alt="">
       </v-list-item-avatar>
       <v-list-item-content>
         <v-list-item-title class="text-h6">
@@ -30,7 +32,9 @@
           link
           :to="{name: routes.TREE, params: {accountId: account.id}}">
           <v-list-item-icon>
-            <v-icon>{{ account.data.type | accountIcon }}</v-icon>
+            <v-icon aria-hidden="true">
+              {{ account.data.type | accountIcon }}
+            </v-icon>
           </v-list-item-icon>
           <v-list-item-title>{{ account.label }}</v-list-item-title>
         </v-list-item>
@@ -40,7 +44,9 @@
         link
         :to="{ name: routes.NEW_ACCOUNT }">
         <v-list-item-icon>
-          <v-icon>mdi-plus</v-icon>
+          <v-icon aria-hidden="true">
+            mdi-plus
+          </v-icon>
         </v-list-item-icon>
 
         <v-list-item-content>
@@ -53,10 +59,25 @@
         link
         :to="{name: routes.IMPORTEXPORT}">
         <v-list-item-icon>
-          <v-icon>mdi-export</v-icon>
+          <v-icon aria-hidden="true">
+            mdi-export
+          </v-icon>
         </v-list-item-icon>
         <v-list-item-content>
           <v-list-item-title>{{ t('LabelImportExport') }}</v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+      <v-list-item
+        key="bugs"
+        link
+        href="https://github.com/floccusaddon/floccus/issues">
+        <v-list-item-icon>
+          <v-icon aria-hidden="true">
+            mdi-bug-outline
+          </v-icon>
+        </v-list-item-icon>
+        <v-list-item-content>
+          <v-list-item-title>{{ t('LabelReportproblem') }}</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
       <v-list-item
@@ -64,7 +85,9 @@
         link
         :to="{name: routes.ABOUT}">
         <v-list-item-icon>
-          <v-icon>mdi-information-outline</v-icon>
+          <v-icon aria-hidden="true">
+            mdi-information-outline
+          </v-icon>
         </v-list-item-icon>
         <v-list-item-content>
           <v-list-item-title>{{ t('LabelAbout') }}</v-list-item-title>
@@ -81,9 +104,13 @@ export default {
   filters: {
     accountIcon(type) {
       const icons = {
-        'google-drive': 'mdi-google-drive',
         'nextcloud-bookmarks': 'mdi-cloud',
-        'webdav': 'mdi-folder-network'
+        'linkwarden': 'mdi-link-box-variant-outline',
+        'karakeep': 'mdi-bookmark-box',
+        'webdav': 'mdi-folder-network',
+        'git': 'mdi-source-repository',
+        'google-drive': 'mdi-google-drive',
+        'dropbox': 'mdi-dropbox'
       }
       return icons[type]
     },

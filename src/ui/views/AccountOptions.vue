@@ -8,7 +8,10 @@
       <div class="overline">
         {{ data.type }}
       </div>
-      <div class="headline">
+      <div
+        class="headline"
+        role="heading"
+        aria-level="1">
         {{ folderName || t('LabelUntitledfolder') }}
       </div>
       <v-list
@@ -18,7 +21,9 @@
           link
           @click="$vuetify.goTo('#server', {duration: 0.5})">
           <v-list-item-icon>
-            <v-icon>mdi-account-box</v-icon>
+            <v-icon aria-hidden="true">
+              mdi-account-box
+            </v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>{{ t('LabelOptionsServerDetails') }}</v-list-item-title>
@@ -28,7 +33,9 @@
           link
           @click="$vuetify.goTo('#folder', {duration: 0.5})">
           <v-list-item-icon>
-            <v-icon>mdi-folder-outline</v-icon>
+            <v-icon aria-hidden="true">
+              mdi-folder-outline
+            </v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>{{ t('LabelOptionsFolderMapping') }}</v-list-item-title>
@@ -38,7 +45,9 @@
           link
           @click="$vuetify.goTo('#sync', {duration: 0.5})">
           <v-list-item-icon>
-            <v-icon>mdi-sync-circle</v-icon>
+            <v-icon aria-hidden="true">
+              mdi-sync-circle
+            </v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>{{ t('LabelOptionsSyncBehavior') }}</v-list-item-title>
@@ -48,7 +57,9 @@
           link
           @click="$vuetify.goTo('#danger', {duration: 0.5})">
           <v-list-item-icon>
-            <v-icon>mdi-alert-circle</v-icon>
+            <v-icon aria-hidden="true">
+              mdi-alert-circle
+            </v-icon>
           </v-list-item-icon>
           <v-list-item-content>
             <v-list-item-title>{{ t('LabelOptionsDangerous') }}</v-list-item-title>
@@ -68,7 +79,10 @@
               <div class="overline">
                 {{ data.type }}
               </div>
-              <div class="headline">
+              <div
+                class="headline"
+                role="heading"
+                aria-level="1">
                 {{ folderName || t('LabelUntitledfolder') }}
               </div>
               <v-list
@@ -78,7 +92,9 @@
                   link
                   @click="$vuetify.goTo('#server', {duration: 0.5})">
                   <v-list-item-icon>
-                    <v-icon>mdi-account-box</v-icon>
+                    <v-icon aria-hidden="true">
+                      mdi-account-box
+                    </v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>{{ t('LabelOptionsServerDetails') }}</v-list-item-title>
@@ -88,7 +104,9 @@
                   link
                   @click="$vuetify.goTo('#folder', {duration: 0.5})">
                   <v-list-item-icon>
-                    <v-icon>mdi-folder-outline</v-icon>
+                    <v-icon aria-hidden="true">
+                      mdi-folder-outline
+                    </v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>{{ t('LabelOptionsFolderMapping') }}</v-list-item-title>
@@ -98,7 +116,9 @@
                   link
                   @click="$vuetify.goTo('#sync', {duration: 0.5})">
                   <v-list-item-icon>
-                    <v-icon>mdi-sync-circle</v-icon>
+                    <v-icon aria-hidden="true">
+                      mdi-sync-circle
+                    </v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>{{ t('LabelOptionsSyncBehavior') }}</v-list-item-title>
@@ -108,7 +128,9 @@
                   link
                   @click="$vuetify.goTo('#danger', {duration: 0.5})">
                   <v-list-item-icon>
-                    <v-icon>mdi-alert-circle</v-icon>
+                    <v-icon aria-hidden="true">
+                      mdi-alert-circle
+                    </v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>{{ t('LabelOptionsDangerous') }}</v-list-item-title>
@@ -126,7 +148,8 @@
               </v-btn>
               <v-icon
                 v-if="saved"
-                color="green">
+                color="green"
+                aria-hidden="true">
                 mdi-check
               </v-icon>
             </div>
@@ -138,8 +161,23 @@
                 v-bind.sync="data"
                 @reset="onReset"
                 @delete="onDelete" />
+              <OptionsLinkwarden
+                v-if="data.type === 'linkwarden'"
+                v-bind.sync="data"
+                @reset="onReset"
+                @delete="onDelete" />
+              <OptionsKarakeep
+                v-if="data.type === 'karakeep'"
+                v-bind.sync="data"
+                @reset="onReset"
+                @delete="onDelete" />
               <OptionsWebdav
                 v-if="data.type === 'webdav'"
+                v-bind.sync="data"
+                @reset="onReset"
+                @delete="onDelete" />
+              <OptionsGit
+                v-if="data.type === 'git'"
                 v-bind.sync="data"
                 @reset="onReset"
                 @delete="onDelete" />
@@ -153,6 +191,11 @@
                 v-bind.sync="data"
                 @reset="onReset"
                 @delete="onDelete" />
+              <OptionsDropbox
+                v-if="data.type === 'dropbox'"
+                v-bind.sync="data"
+                @reset="onReset"
+                @delete="onDelete" />
             </v-form>
             <div class="d-flex flex-row-reverse">
               <v-btn
@@ -162,7 +205,8 @@
               </v-btn>
               <v-icon
                 v-if="saved"
-                color="green">
+                color="green"
+                aria-hidden="true">
                 mdi-check
               </v-icon>
             </div>
@@ -186,16 +230,19 @@
 <script>
 import PathHelper from '../../lib/PathHelper'
 import BrowserTree from '../../lib/browser/BrowserTree'
-import { actions } from '../store'
+import { actions } from '../store/definitions'
 import OptionsNextcloudFolders from '../components/OptionsNextcloudBookmarks'
+import OptionsLinkwarden from '../components/OptionsLinkwarden'
+import OptionsKarakeep from '../components/OptionsKarakeep'
 import OptionsWebdav from '../components/OptionsWebdav'
 import OptionsFake from '../components/OptionsFake'
 import OptionsGoogleDrive from '../components/OptionsGoogleDrive'
-// import OptionsGoogleDrive from '../components/OptionsGoogleDrive'
+import OptionsDropbox from '../components/OptionsDropbox'
+import OptionsGit from '../components/OptionsGit.vue'
 
 export default {
   name: 'AccountOptions',
-  components: { OptionsGoogleDrive, OptionsFake, OptionsWebdav, OptionsNextcloudFolders },
+  components: { OptionsGit, OptionsGoogleDrive, OptionsDropbox, OptionsFake, OptionsWebdav, OptionsNextcloudFolders, OptionsLinkwarden, OptionsKarakeep },
   data() {
     return {
       folderName: '',

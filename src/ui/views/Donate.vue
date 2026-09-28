@@ -3,7 +3,9 @@
     <v-card
       class="options mt-3">
       <v-container class="pa-5">
-        <v-card-title>
+        <v-card-title
+          role="heading"
+          aria-level="1">
           {{ t("LabelFunddevelopment") }}
         </v-card-title>
         <v-card-text>
@@ -21,7 +23,10 @@
               target="_blank"
               width="48%"
               :href="processor.href">
-              <v-card-title class="white--text">
+              <v-card-title
+                class="white--text"
+                role="heading"
+                aria-level="2">
                 {{ processor.label }}
               </v-card-title>
               <v-card-text class="white--text">
@@ -45,7 +50,7 @@ export default {
     return {
       paymentOptions: [
         {
-          href: 'https://www.paypal.me/marcelklehr1',
+          href: 'https://www.paypal.com/donate/?hosted_button_id=R3SDCC7AFSYZU',
           label: browser.i18n.getMessage('LabelPaypal'),
           description: browser.i18n.getMessage('DescriptionPaypal')
         },
@@ -63,7 +68,17 @@ export default {
           href: 'https://github.com/users/marcelklehr/sponsorship',
           label: browser.i18n.getMessage('LabelGithubsponsors'),
           description: browser.i18n.getMessage('DescriptionGithubsponsors')
-        }
+        },
+        {
+          href: 'https://www.patreon.com/marcelklehr',
+          label: browser.i18n.getMessage('LabelPatreon'),
+          description: browser.i18n.getMessage('DescriptionPatreon')
+        },
+        {
+          href: 'https://www.ko-fi.com/marcelklehr',
+          label: browser.i18n.getMessage('LabelKofi'),
+          description: browser.i18n.getMessage('DescriptionKofi')
+        },
       ]
     }
   }

@@ -3,7 +3,18 @@
     <v-card
       class="options mt-3">
       <v-container class="pa-5">
-        <v-card-title>
+        <v-card-title
+          role="heading"
+          aria-level="1">
+          <a
+            href="https://floccus.org"
+            class="d-flex align-center"><img
+              src="/dist/icons/logo_128.png"
+              alt=""> Cross-browser bookmark syncing</a>
+        </v-card-title>
+        <v-card-title
+          role="heading"
+          aria-level="2">
           {{ t("LabelUpdated") }}
         </v-card-title>
         <v-card-text>
@@ -17,32 +28,72 @@
             {{ t('LabelReleaseNotes') }}
           </v-btn>
         </v-card-text>
-        <v-card-title>
-          {{ t("LabelFunddevelopment") }}
-        </v-card-title>
-        <v-card-text>
-          <div class="body-1">
-            {{ t("DescriptionFunddevelopment") }}
-          </div>
-          <div class="d-flex flex-wrap mt-4">
-            <v-card
-              v-for="processor in paymentOptions"
-              :key="processor.label"
-              tile
-              flat
-              :color="'light-blue'"
-              class="mr-2 mb-2"
-              target="_blank"
-              :href="processor.href">
-              <v-card-title class="white--text">
-                {{ processor.label }}
-              </v-card-title>
-              <v-card-text class="white--text">
-                {{ processor.description }}
-              </v-card-text>
-            </v-card>
-          </div>
-        </v-card-text>
+        <template v-if="donateOrReview">
+          <v-card-title
+            role="heading"
+            aria-level="2">
+            {{ t("LabelWritereview") }}
+          </v-card-title>
+          <v-card-text>
+            <div class="body-1">
+              {{ t("DescriptionWritereview") }}
+            </div>
+            <div class="d-flex flex-wrap mt-4">
+              <v-card
+                v-for="platform in reviewOptions"
+                :key="platform.label"
+                tile
+                flat
+                :color="'light-blue'"
+                class="mr-2 mb-2"
+                target="_blank"
+                :href="platform.href">
+                <v-card-title
+                  class="white--text"
+                  role="heading"
+                  aria-level="3">
+                  {{ platform.label }}
+                </v-card-title>
+                <v-card-text class="white--text">
+                  {{ platform.description }}
+                </v-card-text>
+              </v-card>
+            </div>
+          </v-card-text>
+        </template>
+        <template v-else>
+          <v-card-title
+            role="heading"
+            aria-level="2">
+            {{ t("LabelFunddevelopment") }}
+          </v-card-title>
+          <v-card-text>
+            <div class="body-1">
+              {{ t("DescriptionFunddevelopment") }}
+            </div>
+            <div class="d-flex flex-wrap mt-4">
+              <v-card
+                v-for="processor in paymentOptions"
+                :key="processor.label"
+                tile
+                flat
+                :color="'light-blue'"
+                class="mr-2 mb-2"
+                target="_blank"
+                :href="processor.href">
+                <v-card-title
+                  class="white--text"
+                  role="heading"
+                  aria-level="3">
+                  {{ processor.label }}
+                </v-card-title>
+                <v-card-text class="white--text">
+                  {{ processor.description }}
+                </v-card-text>
+              </v-card>
+            </div>
+          </v-card-text>
+        </template>
         <v-card-text v-if="!isBrowser">
           <v-btn
             class="primary mt-2"
@@ -65,9 +116,10 @@ export default {
   components: {},
   data() {
     return {
+      donateOrReview: Boolean(Math.round(Math.random())),
       paymentOptions: [
         {
-          href: 'https://www.paypal.me/marcelklehr1',
+          href: 'https://www.paypal.com/donate/?hosted_button_id=R3SDCC7AFSYZU',
           label: this.t('LabelPaypal'),
           description: this.t('DescriptionPaypal')
         },
@@ -85,8 +137,19 @@ export default {
           href: 'https://github.com/users/marcelklehr/sponsorship',
           label: this.t('LabelGithubsponsors'),
           description: this.t('DescriptionGithubsponsors')
-        }
-      ]
+        },
+        {
+          href: 'https://www.patreon.com/marcelklehr',
+          label: this.t('LabelPatreon'),
+          description: this.t('DescriptionPatreon')
+        },
+        {
+          href: 'https://www.ko-fi.com/marcelklehr',
+          label: this.t('LabelKofi'),
+          description: this.t('DescriptionKofi')
+        },
+      ],
+      reviewOptions: [],
     }
   },
   computed: {
@@ -97,8 +160,40 @@ export default {
       return routes
     }
   },
-  methods: {
-  }
+  async created() {
+    this.reviewOptions = (!this.isBrowser ? [
+      {
+        href: 'https://play.google.com/store/apps/details?id=org.handmadeideas.floccus',
+        label: 'Google Play',
+        description: this.t('DescriptionGoogleplayreview')
+      },
+      {
+        href: 'https://apps.apple.com/us/app/floccus/id1626998357',
+        label: 'Apple App Store',
+        description: this.t('DescriptionAppstorereview')
+      }] : []).concat([
+      {
+        href: 'https://addons.mozilla.org/de/firefox/addon/floccus/reviews/',
+        label: 'Mozilla Addons',
+        description: this.t('DescriptionMozillareview')
+      },
+      {
+        href: 'https://chromewebstore.google.com/detail/floccus-bookmarks-sync/fnaicdffflnofjppbagibeoednhnbjhg',
+        label: 'Chrome WebStore',
+        description: this.t('DescriptionChromereview')
+      },
+      {
+        href: 'https://microsoftedge.microsoft.com/addons/detail/gjkddcofhiifldbllobcamllmanombji',
+        label: 'Edge Addons',
+        description: this.t('DescriptionEdgereview')
+      },
+      {
+        href: 'https://alternativeto.net/software/floccus/about/',
+        label: 'AlternativeTo.net',
+        description: this.t('DescriptionAlternativereview')
+      },
+    ])
+  },
 }
 </script>
 
@@ -111,5 +206,9 @@ export default {
       .v-card--flat {
         width: 48%
       }
+    }
+    a:link {
+      color: inherit;
+      text-decoration: none;
     }
 </style>

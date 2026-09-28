@@ -5,9 +5,6 @@ export const mutationsDefinition = {
   [mutations.SET_LOCKED](state, locked) {
     state.locked = locked
   },
-  [mutations.SET_SECURED](state, secured) {
-    state.secured = secured
-  },
   [mutations.LOAD_ACCOUNTS](state, accounts) {
     state.accounts = accounts
   },
@@ -17,8 +14,11 @@ export const mutationsDefinition = {
   [mutations.REMOVE_ACCOUNT](state, id) {
     Vue.delete(state.accounts, id)
   },
-  [mutations.LOAD_TREE](state, tree) {
-    state.tree = tree
+  [mutations.LOAD_FOLDERS](state, folderTree) {
+    state.folderTree = folderTree
+  },
+  [mutations.SET_TAG_SUPPORT](state, {accountId, supportsTags}) {
+    Vue.set(state.tagSupport, accountId, supportsTags)
   },
   [mutations.SET_LOGIN_FLOW_STATE](state, running) {
     Vue.set(state.loginFlow, 'isRunning', running)
@@ -31,5 +31,8 @@ export const mutationsDefinition = {
   },
   [mutations.SET_LAST_FOLDER](state, {accountId, folderId}) {
     Vue.set(state.lastFolders, accountId, folderId)
+  },
+  [mutations.SET_LAST_ACCOUNT](state, accountId) {
+    state.lastAccount = accountId
   }
 }
